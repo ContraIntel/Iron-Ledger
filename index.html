@@ -21,7 +21,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--black);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased}
-button{cursor:pointer;font-family:'Barlow',sans-serif}
+button{cursor:pointer;font-family:'Barlow',sans-serif;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 input,textarea{font-family:'Barlow',sans-serif}
 .hidden{display:none!important}
 .screen{display:none;min-height:100vh}
@@ -400,6 +400,7 @@ display:grid;grid-template-columns:1fr 300px;gap:18px;
 background:var(–g1);border:1px solid var(–b);
 padding:12px 14px;display:flex;align-items:center;gap:10px;
 margin-bottom:2px;cursor:pointer;transition:border-color 0.15s;
+width:100%;text-align:left;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
 }
 .log-bar:hover{border-color:var(–orange)}
 .log-av{width:34px;height:34px;background:var(–orange);display:flex;align-items:center;justify-content:center;font-family:‘Barlow Condensed’,sans-serif;font-weight:700;color:var(–black);flex-shrink:0}
@@ -492,7 +493,7 @@ MODALS
 .modal-x:hover{color:var(–text)}
 .modal-body{padding:18px;display:flex;flex-direction:column;gap:14px}
 .tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.topt{background:var(–g2);border:1px solid var(–b);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.topt{background:var(–g2);border:1px solid var(–b);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px;-webkit-appearance:none;appearance:none;width:100%;font-family:‘Barlow’,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .topt:hover{border-color:var(–g5)}
 .topt.sel{border-color:var(–orange);background:var(–od)}
 .topt-icon{font-size:20px}
@@ -766,11 +767,11 @@ MODALS
   <div id="page-feed" class="pview active">
     <div class="feed-wrap">
       <div class="feed-main">
-        <div class="log-bar" onclick="openPost()">
+        <button class="log-bar" onclick="openPost()" type="button">
           <div class="log-av" id="log-av">?</div>
           <div class="log-ph">Log today's workout...</div>
           <span style="font-size:18px;color:var(--g5)">📸</span>
-        </div>
+        </button>
         <div id="feed"></div>
       </div>
       <div class="sidebar">
@@ -865,12 +866,12 @@ MODALS
       <div>
         <div class="flbl" style="margin-bottom:7px">Workout Type</div>
         <div class="tgrid">
-          <div class="topt sel" onclick="selType(this,'Lifting')"><div class="topt-icon">🏋️</div><div class="topt-lbl">Lift</div></div>
-          <div class="topt" onclick="selType(this,'Running')"><div class="topt-icon">🏃</div><div class="topt-lbl">Run</div></div>
-          <div class="topt" onclick="selType(this,'Combat')"><div class="topt-icon">⚔️</div><div class="topt-lbl">Combat</div></div>
-          <div class="topt" onclick="selType(this,'Cycling')"><div class="topt-icon">🚴</div><div class="topt-lbl">Cycle</div></div>
-          <div class="topt" onclick="selType(this,'Walking')"><div class="topt-icon">🚶</div><div class="topt-lbl">Walk</div></div>
-          <div class="topt" onclick="selType(this,'Custom')"><div class="topt-icon">⚡</div><div class="topt-lbl">Custom</div></div>
+          <button class="topt sel" onclick="selType(this,'Lifting')" type="button"><div class="topt-icon">🏋️</div><div class="topt-lbl">Lift</div></button>
+          <button class="topt" onclick="selType(this,'Running')" type="button"><div class="topt-icon">🏃</div><div class="topt-lbl">Run</div></button>
+          <button class="topt" onclick="selType(this,'Combat')" type="button"><div class="topt-icon">⚔️</div><div class="topt-lbl">Combat</div></button>
+          <button class="topt" onclick="selType(this,'Cycling')" type="button"><div class="topt-icon">🚴</div><div class="topt-lbl">Cycle</div></button>
+          <button class="topt" onclick="selType(this,'Walking')" type="button"><div class="topt-icon">🚶</div><div class="topt-lbl">Walk</div></button>
+          <button class="topt" onclick="selType(this,'Custom')" type="button"><div class="topt-icon">⚡</div><div class="topt-lbl">Custom</div></button>
         </div>
       </div>
       <div class="row2">
@@ -1459,9 +1460,12 @@ async function submitWorkout() {
 
   if (signed) {
     prependPost({ eventId:signed.id, pubkey:S.pubkey, user:S.displayName||'you', avatar:(S.displayName||'Y')[0].toUpperCase(), type:S.selectedType, duration:+dur, intensity:+(intensity||7), streak:13, caption:notes||tpl.content, images:[...S.postImages], mediaHash:S.imageHashes[0]||null, zapTotal:0, cosigns:0, comments:[], time:'just now', verified:false });
-    closeModal('post-modal'); resetPostForm();
+    closeModal('post-modal');
+    // resetPostForm called by closeModal
     setTimeout(()=>toast('🤖 Spotter Bot reviewing…','ok'),1400);
     setTimeout(()=>toast('✅ Streak +1 — verified','ok'),3200);
+  } else {
+    toast('Could not broadcast — check connection','err');
   }
 }
 
@@ -1782,9 +1786,18 @@ function updateUserPill() {
 function updateLogAv() { const e=document.getElementById('log-av');if(e)e.textContent=(S.displayName||'?')[0].toUpperCase(); }
 function updateBal() { const e=document.getElementById('bal');if(e)e.textContent=S.balance.toLocaleString()+' sats'; }
 function openPost() { document.getElementById('post-modal').classList.remove('hidden'); updatePostRelayBar(); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (id === 'post-modal') resetPostForm();
+}
 function resetPostForm() { ['p-dur','p-int','p-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''}); document.getElementById('ipg').innerHTML=''; document.getElementById('hash-row').style.display='none'; S.postImages=[]; S.imageHashes=[]; }
-function selType(el,t) { document.querySelectorAll('.topt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');S.selectedType=t; }
+function selType(el,t) {
+  // Scope to the post modal only so we don't accidentally touch other elements
+  const modal = document.getElementById('post-modal');
+  if (modal) modal.querySelectorAll('.topt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  S.selectedType = t;
+}
 function openLbox(src) { document.getElementById('lbox-img').src=src;document.getElementById('lbox').classList.remove('hidden'); }
 function closeLbox() { document.getElementById('lbox').classList.add('hidden'); }
 function toggleElog() { document.getElementById('elog').classList.toggle('open'); }
