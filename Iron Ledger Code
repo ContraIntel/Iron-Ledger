@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iron Ledger — Proof of Workout</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- nostr-tools for crypto primitives -->
+<script src="https://unpkg.com/nostr-tools@2.7.2/lib/nostr.bundle.js"></script>
+<!-- QR code generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --black:#000;--white:#fff;--orange:#f7931a;
+  --od:rgba(247,147,26,0.13);--og:rgba(247,147,26,0.06);
+  --g1:#111;--g2:#1a1a1a;--g3:#242424;--g4:#333;
+  --g5:#555;--g6:#888;--g7:#aaa;--text:#f0f0f0;
+  --b:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
+  --green:#22c55e;--red:#ef4444;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--black);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:'Barlow',sans-serif}
+input,textarea{font-family:'Barlow',sans-serif}
+.hidden{display:none!important}
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* ════════════════════════════
+BRAND — IRON LEDGER LOGO
+════════════════════════════ */
+.brand-logo {
+display:inline-flex;
+align-items:center;
+gap:0;
+line-height:1;
+}
+.brand-iron {
+font-family:‘Bebas Neue’,sans-serif;
+letter-spacing:5px;
+color:var(–white);
+}
+.brand-barbell {
+display:inline-flex;
+align-items:center;
+margin:0 1px;
+position:relative;
+}
+.brand-barbell svg {
+display:block;
+overflow:visible;
+}
+.brand-edger {
+font-family:‘Bebas Neue’,sans-serif;
+letter-spacing:5px;
+color:var(–white);
+}
+
+/* ════════════════════════════
+LOGIN SCREEN
+════════════════════════════ */
+#screen-login {
+display:flex;flex-direction:column;align-items:center;
+justify-content:center;padding:40px 20px;min-height:100vh;
+position:relative;overflow:hidden;
+}
+
+/* Animated grid bg */
+#screen-login::before {
+content:’’;position:fixed;inset:0;
+background-image:
+linear-gradient(rgba(247,147,26,0.04) 1px,transparent 1px),
+linear-gradient(90deg,rgba(247,147,26,0.04) 1px,transparent 1px);
+background-size:60px 60px;
+animation:gridDrift 20s linear infinite;
+pointer-events:none;
+}
+@keyframes gridDrift{0%{transform:translateY(0)}100%{transform:translateY(60px)}}
+
+/* Orange glow orb */
+#screen-login::after {
+content:’’;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+width:500px;height:500px;
+background:radial-gradient(circle,rgba(247,147,26,0.06) 0%,transparent 70%);
+pointer-events:none;
+}
+
+.login-shell {
+width:100%;max-width:680px;
+position:relative;z-index:1;
+animation:riseIn 0.5s ease;
+}
+@keyframes riseIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.login-headline {
+text-align:center;margin-bottom:36px;
+}
+.login-headline .brand-logo { font-size:72px; }
+.login-tagline {
+font-size:11px;letter-spacing:5px;text-transform:uppercase;
+color:var(–g6);margin-top:8px;display:block;
+}
+
+/* ── Method tabs ── */
+.method-tabs {
+display:grid;grid-template-columns:repeat(3,1fr);
+gap:1px;background:var(–b);margin-bottom:1px;
+}
+.mtab {
+background:var(–g1);padding:11px;
+font-family:‘Barlow Condensed’,sans-serif;font-size:10px;font-weight:600;
+letter-spacing:3px;text-transform:uppercase;color:var(–g6);
+border:none;border-bottom:2px solid transparent;transition:all 0.15s;
+}
+.mtab:hover{color:var(–text)}
+.mtab.active{color:var(–orange);border-bottom-color:var(–orange);background:rgba(247,147,26,0.05)}
+
+.method-panel {
+background:var(–g1);border:1px solid var(–b2);
+padding:22px;margin-bottom:14px;
+}
+.mp-inner{display:none}
+.mp-inner.active{display:block}
+
+/* ── QR connect panel ── */
+.qr-connect-state {
+display:flex;flex-direction:column;align-items:center;gap:0;
+}
+
+.qr-step-label {
+font-size:8px;letter-spacing:5px;text-transform:uppercase;
+color:var(–orange);margin-bottom:14px;display:block;
+}
+
+/* Two-column connect layout */
+.connect-two-col {
+display:grid;
+grid-template-columns:1fr auto 1fr;
+gap:0;
+align-items:start;
+margin-bottom:4px;
+}
+
+.connect-col-hd {
+display:flex;align-items:center;gap:6px;
+margin-bottom:10px;
+}
+.connect-col-icon { font-size:14px; }
+.connect-col-title {
+font-family:‘Barlow Condensed’,sans-serif;font-size:10px;font-weight:700;
+letter-spacing:3px;text-transform:uppercase;color:var(–g7);
+}
+
+.connect-col-qr {
+display:flex;flex-direction:column;align-items:center;
+padding-right:16px;
+}
+.connect-col-uri {
+display:flex;flex-direction:column;
+padding-left:16px;
+}
+
+/* Divider */
+.connect-divider {
+display:flex;flex-direction:column;align-items:center;gap:8px;
+padding-top:30px;
+}
+.connect-divider-line {
+width:1px;flex:1;background:var(–b2);min-height:30px;
+}
+.connect-divider-or {
+font-size:9px;letter-spacing:3px;color:var(–g5);
+font-family:‘Barlow Condensed’,sans-serif;font-weight:600;
+text-transform:uppercase;
+background:var(–g1);padding:4px 0;
+}
+
+/* URI box */
+.uri-box {
+display:flex;flex-direction:column;gap:6px;
+}
+.uri-box-label {
+font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(–g6);
+}
+.uri-textarea {
+width:100%;height:96px;background:var(–black);border:1px solid var(–b2);
+color:var(–orange);padding:8px 10px;font-family:‘Courier New’,monospace;
+font-size:8px;letter-spacing:0.5px;line-height:1.6;
+resize:none;outline:none;cursor:pointer;
+transition:border-color 0.15s;word-break:break-all;
+}
+.uri-textarea:focus { border-color:var(–orange); }
+.uri-textarea::selection { background:rgba(247,147,26,0.2); }
+
+@media(max-width:520px) {
+.connect-two-col {
+grid-template-columns:1fr;
+grid-template-rows:auto auto auto;
+}
+.connect-divider {
+flex-direction:row;padding:8px 0;
+}
+.connect-divider-line { width:auto;height:1px;flex:1;min-height:0; }
+.connect-col-qr { padding-right:0;padding-bottom:12px; }
+.connect-col-uri { padding-left:0;padding-top:12px; }
+}
+
+/* QR container */
+.qr-wrap {
+width:220px;height:220px;
+background:var(–white);
+display:flex;align-items:center;justify-content:center;
+margin:0 auto 16px;
+position:relative;
+border:3px solid var(–white);
+}
+
+/* Scanning animation corners */
+.qr-wrap::before, .qr-wrap::after {
+content:’’;position:absolute;width:20px;height:20px;
+border-color:var(–orange);border-style:solid;
+}
+.qr-wrap::before { top:-4px;left:-4px;border-width:3px 0 0 3px; }
+.qr-wrap::after  { bottom:-4px;right:-4px;border-width:0 3px 3px 0; }
+
+.qr-scan-line {
+position:absolute;left:0;right:0;height:2px;
+background:linear-gradient(90deg,transparent,var(–orange),transparent);
+animation:scanDown 2.5s ease-in-out infinite;
+z-index:2;
+}
+@keyframes scanDown{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+
+#qr-placeholder {
+display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.qr-spinner {
+width:32px;height:32px;border:2px solid var(–b2);border-top-color:var(–orange);
+border-radius:50%;animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.qr-instructions {
+width:100%;display:flex;flex-direction:column;gap:6px;margin-bottom:16px;
+}
+.qr-step {
+display:flex;align-items:flex-start;gap:10px;
+background:var(–g2);border:1px solid var(–b);padding:9px 11px;
+}
+.qr-step-n {
+width:18px;height:18px;background:var(–orange);color:var(–black);
+font-family:‘Barlow Condensed’,sans-serif;font-weight:700;font-size:10px;
+display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.qr-step-txt { font-size:11px;color:var(–g7);line-height:1.5 }
+.qr-step-txt strong { color:var(–text) }
+
+/* Waiting / connected states */
+.qr-status {
+width:100%;padding:10px 12px;font-size:11px;line-height:1.6;
+display:flex;align-items:center;gap:8px;
+background:var(–g2);border:1px solid var(–b);
+}
+.qr-status-dot {
+width:7px;height:7px;border-radius:50%;flex-shrink:0;
+background:var(–orange);animation:blink 1.2s ease-in-out infinite;
+}
+.qr-status-dot.ok{background:var(–green);animation:none}
+.qr-status-dot.err{background:var(–red);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.qr-uri-copy {
+width:100%;display:flex;gap:0;margin-top:8px;
+}
+.qr-uri-val {
+flex:1;background:var(–black);border:1px solid var(–b);border-right:none;
+color:var(–g6);padding:7px 10px;font-size:8px;font-family:‘Courier New’,monospace;
+letter-spacing:0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.btn-copy-uri {
+background:var(–g3);color:var(–text);border:1px solid var(–b2);
+padding:7px 12px;font-family:‘Barlow Condensed’,sans-serif;
+font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+transition:all 0.15s;white-space:nowrap;
+}
+.btn-copy-uri:hover{background:var(–orange);color:var(–black);border-color:var(–orange)}
+.btn-copy-uri.ok{background:var(–green);color:var(–black);border-color:var(–green)}
+
+.btn-regen {
+background:transparent;color:var(–g6);border:1px solid var(–b);
+padding:8px;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+font-family:‘Barlow Condensed’,sans-serif;font-weight:600;
+width:100%;margin-top:6px;transition:all 0.15s;
+}
+.btn-regen:hover{border-color:var(–g5);color:var(–text)}
+
+/* NIP-07 panel */
+.nip07-detect {
+display:flex;align-items:center;gap:10px;
+background:var(–g2);border:1px solid var(–b);
+padding:12px;margin-bottom:14px;
+}
+.detect-dot{width:8px;height:8px;border-radius:50%;background:var(–g4);flex-shrink:0}
+.detect-dot.yes{background:var(–green)}
+.detect-dot.no{background:var(–red)}
+
+.btn-primary {
+background:var(–orange);color:var(–black);border:none;
+padding:13px 24px;font-family:‘Barlow Condensed’,sans-serif;
+font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+width:100%;transition:opacity 0.15s;
+}
+.btn-primary:hover{opacity:0.87}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed}
+
+.btn-secondary {
+background:transparent;color:var(–text);border:1px solid var(–b2);
+padding:11px 24px;font-family:‘Barlow Condensed’,sans-serif;
+font-size:13px;font-weight:600;letter-spacing:3px;text-transform:uppercase;
+width:100%;transition:all 0.15s;
+}
+.btn-secondary:hover{border-color:var(–orange);color:var(–orange)}
+
+.login-fine {
+font-size:10px;color:var(–g6);text-align:center;line-height:1.8;letter-spacing:0.3px;
+}
+
+/* ════════════════════════════
+APP SHELL
+════════════════════════════ */
+.top-bar {
+position:sticky;top:0;z-index:100;
+background:rgba(0,0,0,0.96);backdrop-filter:blur(12px);
+border-bottom:1px solid var(–b);
+padding:0 20px;height:54px;
+display:flex;align-items:center;justify-content:space-between;
+}
+.top-logo { font-size:22px; }
+
+.top-tabs{display:flex;gap:0}
+.ttab{
+background:transparent;color:var(–g6);border:none;
+padding:8px 13px;font-family:‘Barlow Condensed’,sans-serif;
+font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;
+border-bottom:2px solid transparent;transition:all 0.15s;
+}
+.ttab:hover{color:var(–text)}
+.ttab.active{color:var(–orange);border-bottom-color:var(–orange)}
+
+.top-right{display:flex;align-items:center;gap:10px}
+.bal-pill{
+display:flex;align-items:center;gap:5px;
+background:var(–od);border:1px solid rgba(247,147,26,0.2);padding:5px 10px;
+}
+.bal-val{font-family:‘Barlow Condensed’,sans-serif;font-size:14px;font-weight:700;color:var(–orange)}
+.user-pill{
+display:flex;align-items:center;gap:7px;
+background:var(–g1);border:1px solid var(–b2);padding:5px 10px;cursor:pointer;
+}
+.user-av{
+width:22px;height:22px;background:var(–orange);
+display:flex;align-items:center;justify-content:center;
+font-family:‘Barlow Condensed’,sans-serif;font-weight:700;font-size:11px;color:var(–black);
+}
+.user-name{font-size:11px;letter-spacing:1px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Relay bar */
+#relay-bar{
+background:var(–g1);border-bottom:1px solid var(–b);
+padding:5px 20px;display:flex;align-items:center;gap:10px;
+font-size:9px;letter-spacing:2px;text-transform:uppercase;
+transform:translateY(-100%);transition:transform 0.3s;overflow:hidden;
+}
+#relay-bar.show{transform:translateY(0)}
+.rdot{width:5px;height:5px;border-radius:50%;animation:blink 1.5s infinite}
+.rdot.up{background:var(–green);animation:none}
+.rdot.down{background:var(–red);animation:none}
+.rdot.mid{background:var(–orange)}
+.rchips{display:flex;gap:4px;flex-wrap:wrap}
+.rchip{padding:2px 7px;border:1px solid var(–b2);font-size:8px;letter-spacing:1px;color:var(–g7)}
+.rchip.up{border-color:rgba(34,197,94,0.3);color:var(–green)}
+.rchip.err{border-color:rgba(239,68,68,0.3);color:var(–red)}
+.rchip.mine{border-color:rgba(247,147,26,0.4);color:var(–orange)}
+
+/* Pages */
+.pview{display:none;padding-bottom:80px}
+.pview.active{display:block}
+
+/* ════════════════════════════
+FEED
+════════════════════════════ */
+.feed-wrap{
+max-width:1060px;margin:0 auto;padding:18px;
+display:grid;grid-template-columns:1fr 300px;gap:18px;
+}
+@media(max-width:780px){.feed-wrap{grid-template-columns:1fr}.sidebar{display:none}}
+
+.log-bar{
+background:var(–g1);border:1px solid var(–b);
+padding:12px 14px;display:flex;align-items:center;gap:10px;
+margin-bottom:2px;cursor:pointer;transition:border-color 0.15s;
+}
+.log-bar:hover{border-color:var(–orange)}
+.log-av{width:34px;height:34px;background:var(–orange);display:flex;align-items:center;justify-content:center;font-family:‘Barlow Condensed’,sans-serif;font-weight:700;color:var(–black);flex-shrink:0}
+.log-ph{flex:1;color:var(–g5);font-size:13px}
+
+/* Workout card */
+.wcard{background:var(–g1);border:1px solid var(–b);margin-bottom:2px;animation:fadeUp 0.3s ease forwards;opacity:0}
+.wcard:hover{border-color:rgba(255,255,255,0.1)}
+.wcard.vfd{border-left:2px solid var(–orange)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.wc-head{padding:12px 14px 0;display:flex;align-items:center;gap:10px}
+.wc-av{width:38px;height:38px;background:var(–g3);display:flex;align-items:center;justify-content:center;font-family:‘Barlow Condensed’,sans-serif;font-weight:700;font-size:15px;flex-shrink:0;overflow:hidden}
+.wc-uname{font-family:‘Barlow Condensed’,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:5px}
+.vbadge{width:14px;height:14px;background:var(–orange);color:var(–black);font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.wc-meta{font-size:10px;color:var(–g6);margin-top:1px}
+.streak-b{margin-left:auto;background:var(–od);border:1px solid rgba(247,147,26,0.2);padding:3px 8px;font-family:‘Barlow Condensed’,sans-serif;font-size:12px;font-weight:700;color:var(–orange)}
+.wc-type{display:inline-flex;align-items:center;gap:5px;margin:10px 14px 0;background:var(–g2);border:1px solid var(–b);padding:3px 8px;font-family:‘Barlow Condensed’,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(–g7)}
+.wc-stats{display:flex;margin:10px 0 0;border-top:1px solid var(–b);border-bottom:1px solid var(–b)}
+.wcs{flex:1;text-align:center;padding:8px;border-right:1px solid var(–b)}
+.wcs:last-child{border-right:none}
+.wcs-v{font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:1px;line-height:1}
+.wcs-l{font-size:7px;letter-spacing:3px;text-transform:uppercase;color:var(–g6);margin-top:1px}
+.wc-imgs{display:grid;gap:2px}
+.wc-imgs.c1{grid-template-columns:1fr}
+.wc-imgs.c2{grid-template-columns:1fr 1fr}
+.wc-imgs.c3{grid-template-columns:1fr 1fr}
+.wc-imgs.c3 .wci:first-child{grid-column:1/-1}
+.wci{width:100%;aspect-ratio:16/9;object-fit:cover;cursor:pointer;display:block}
+.wc-imgs.c1 .wci{aspect-ratio:4/3}
+.wc-body{padding:10px 14px;font-size:13px;line-height:1.6}
+.proof-row{margin:0 14px 8px;padding:5px 9px;background:rgba(247,147,26,0.04);border:1px solid rgba(247,147,26,0.1);display:flex;align-items:center;gap:6px;font-size:9px}
+.proof-hash{font-family:‘Courier New’,monospace;font-size:8px;color:var(–orange);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.wc-acts{display:flex;align-items:center;border-top:1px solid var(–b);height:44px;padding:0 6px;gap:2px}
+.act{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(–g6);padding:6px 10px;font-size:12px;transition:all 0.15s}
+.act:hover{color:var(–text);background:var(–g2)}
+.act.zap:hover,.act.zap.fired{color:var(–orange)}
+.act.zap.fired{animation:zapPop 0.35s ease}
+@keyframes zapPop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.act.cos:hover,.act.cos.done{color:var(–green)}
+.zap-total{margin-left:auto;font-family:‘Barlow Condensed’,sans-serif;font-size:13px;font-weight:700;color:var(–orange);padding-right:6px}
+.cmts{display:none;border-top:1px solid var(–b)}
+.cmts.open{display:block}
+.cmt-list{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.cmt{display:flex;gap:8px;animation:fadeUp 0.2s ease forwards}
+.cmt-av{width:26px;height:26px;background:var(–g3);display:flex;align-items:center;justify-content:center;font-family:‘Barlow Condensed’,sans-serif;font-weight:700;font-size:11px;flex-shrink:0}
+.cmt-user{font-family:‘Barlow Condensed’,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px}
+.cmt-text{font-size:12px;color:var(–g7);line-height:1.5;margin-top:1px}
+.cmt-meta{display:flex;gap:8px;margin-top:3px}
+.cmt-act{font-size:10px;color:var(–g6);background:transparent;border:none;cursor:pointer;transition:color 0.15s;font-family:‘Barlow’,sans-serif}
+.cmt-act:hover{color:var(–orange)}
+.cmt-row{display:flex;gap:6px;padding:8px 14px;border-top:1px solid var(–b)}
+.cmt-inp{flex:1;background:var(–g2);border:1px solid var(–b);color:var(–text);padding:7px 10px;font-size:12px;outline:none;transition:border-color 0.15s}
+.cmt-inp:focus{border-color:var(–orange)}
+.cmt-inp::placeholder{color:var(–g5)}
+.btn-cmt{background:var(–orange);color:var(–black);border:none;padding:7px 12px;font-family:‘Barlow Condensed’,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px}
+
+/* Sidebar */
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.scard{background:var(–g1);border:1px solid var(–b)}
+.scard-lbl{font-size:8px;letter-spacing:5px;text-transform:uppercase;color:var(–orange);padding:12px 14px 0}
+.scard-title{font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:2px;padding:3px 14px 0;line-height:1.1}
+.scard-body{padding:10px 14px 14px}
+.pbar{height:2px;background:var(–g3);margin:8px 0 4px}
+.pbar-fill{height:100%;background:var(–orange)}
+.plbls{display:flex;justify-content:space-between;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(–g6)}
+.sc-mini{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:8px 0}
+.scm{background:var(–g2);padding:6px}
+.scm-v{font-family:‘Bebas Neue’,sans-serif;font-size:18px;color:var(–orange)}
+.scm-l{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(–g6)}
+.lb-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(–b)}
+.lb-row:last-child{border-bottom:none}
+.lb-rank{font-family:‘Bebas Neue’,sans-serif;font-size:16px;color:var(–g5);width:18px;text-align:center}
+.lb-rank.top{color:var(–orange)}
+.lb-av{width:26px;height:26px;background:var(–g3);display:flex;align-items:center;justify-content:center;font-family:‘Barlow Condensed’,sans-serif;font-weight:700;font-size:11px;flex-shrink:0}
+.lb-name{flex:1;font-family:‘Barlow Condensed’,sans-serif;font-size:12px;font-weight:600;letter-spacing:1px}
+.lb-s{font-family:‘Bebas Neue’,sans-serif;font-size:16px;color:var(–orange)}
+
+/* ════════════════════════════
+MODALS
+════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn 0.2s}
+.overlay.hidden{display:none}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(–g1);border:1px solid var(–b2);width:100%;max-width:500px;max-height:90vh;overflow-y:auto;animation:slideUp 0.25s ease}
+@keyframes slideUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(–b)}
+.modal-title{font-family:‘Bebas Neue’,sans-serif;font-size:20px;letter-spacing:3px}
+.modal-x{background:transparent;border:none;color:var(–g6);font-size:18px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;transition:color 0.15s}
+.modal-x:hover{color:var(–text)}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:14px}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.topt{background:var(–g2);border:1px solid var(–b);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.topt:hover{border-color:var(–g5)}
+.topt.sel{border-color:var(–orange);background:var(–od)}
+.topt-icon{font-size:20px}
+.topt-lbl{font-family:‘Barlow Condensed’,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(–g7)}
+.topt.sel .topt-lbl{color:var(–orange)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.flbl{font-size:8px;letter-spacing:4px;text-transform:uppercase;color:var(–g6)}
+.finput,.ftarea{background:var(–g2);border:1px solid var(–b);color:var(–text);padding:9px 11px;font-size:13px;outline:none;width:100%;transition:border-color 0.15s}
+.finput:focus,.ftarea:focus{border-color:var(–orange)}
+.finput::placeholder,.ftarea::placeholder{color:var(–g5)}
+.ftarea{resize:vertical;min-height:72px}
+.upload-zone{border:1px dashed var(–b2);padding:18px;text-align:center;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.upload-zone:hover{border-color:var(–orange);background:var(–og)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.ipg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:5px}
+.ipr{aspect-ratio:1;object-fit:cover;width:100%;border:1px solid var(–b)}
+.hash-row{background:var(–og);border:1px solid rgba(247,147,26,0.15);padding:7px 10px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(–g6);display:none;align-items:center;gap:6px}
+.hash-val{font-family:‘Courier New’,monospace;font-size:8px;color:var(–orange);word-break:break-all}
+.relay-info-bar{background:var(–g2);border:1px solid var(–b);padding:7px 10px;font-size:9px;color:var(–g6);letter-spacing:1px}
+.btn-post{background:var(–orange);color:var(–black);border:none;padding:13px;font-family:‘Barlow Condensed’,sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;width:100%;transition:opacity 0.15s}
+.btn-post:hover{opacity:0.88}
+.btn-post:disabled{opacity:0.45;cursor:not-allowed}
+
+/* Zap */
+.zap-wrap{max-width:340px}
+.zap-amts{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px}
+.za{background:var(–g2);color:var(–text);border:1px solid var(–b);padding:8px;font-family:‘Barlow Condensed’,sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.15s}
+.za:hover{background:var(–orange);color:var(–black);border-color:var(–orange)}
+.zcr{display:flex;gap:6px}
+.zci{flex:1;background:var(–g2);border:1px solid var(–b);color:var(–text);padding:9px 11px;font-size:13px;outline:none;transition:border-color 0.15s}
+.zci:focus{border-color:var(–orange)}
+.btn-zap{background:var(–orange);color:var(–black);border:none;padding:9px 14px;font-family:‘Barlow Condensed’,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;white-space:nowrap}
+.zap-status{padding:14px;text-align:center;display:none}
+.zap-status.show{display:block}
+.zsi{font-size:34px;margin-bottom:8px}
+.zst{font-size:12px;color:var(–g7);line-height:1.6}
+
+/* Event log */
+.elog{position:fixed;bottom:72px;right:14px;z-index:90;width:310px;max-height:260px;overflow-y:auto;background:rgba(0,0,0,0.95);border:1px solid var(–b2);display:none}
+.elog.open{display:block}
+.elog-hd{padding:7px 11px;border-bottom:1px solid var(–b);display:flex;justify-content:space-between;align-items:center}
+.elog-t{font-size:8px;letter-spacing:4px;text-transform:uppercase;color:var(–g6)}
+.elog-x{background:transparent;border:none;color:var(–g6);font-size:13px}
+.elog-e{padding:5px;display:flex;flex-direction:column;gap:2px}
+.ee{padding:4px 7px;font-size:9px;letter-spacing:1px;line-height:1.4;border-left:2px solid var(–g4);color:var(–g7)}
+.ee.ok{border-left-color:var(–green);color:var(–green)}
+.ee.warn{border-left-color:var(–orange);color:var(–orange)}
+.ee.err{border-left-color:var(–red);color:var(–red)}
+
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.97);backdrop-filter:blur(10px);border-top:1px solid var(–b);display:grid;grid-template-columns:repeat(4,1fr);z-index:100}
+.bn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 8px;cursor:pointer;background:transparent;border:none;border-top:2px solid transparent;color:var(–g6);transition:all 0.15s}
+.bn:hover{color:var(–text)}
+.bn.active{color:var(–orange);border-top-color:var(–orange)}
+.bn-icon{font-size:18px}
+.bn-lbl{font-family:‘Barlow Condensed’,sans-serif;font-size:8px;letter-spacing:2px;text-transform:uppercase}
+.fab{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(–orange);color:var(–black);border:none;padding:12px 28px;font-family:‘Barlow Condensed’,sans-serif;font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;z-index:99;box-shadow:0 4px 20px rgba(247,147,26,0.3);transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.fab:hover{transform:translateX(-50%) translateY(-2px);box-shadow:0 6px 28px rgba(247,147,26,0.4)}
+
+/* Toasts */
+.toasts{position:fixed;bottom:84px;right:14px;z-index:300;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.toast{background:var(–g1);border:1px solid var(–b2);border-left:3px solid var(–orange);padding:9px 13px;font-size:12px;max-width:260px;line-height:1.4;animation:toastIn 0.3s ease}
+.toast.ok{border-left-color:var(–green)}
+.toast.err{border-left-color:var(–red)}
+@keyframes toastIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(12px)}}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:400;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.lightbox.hidden{display:none}
+.lightbox img{max-width:90vw;max-height:90vh;object-fit:contain}
+</style>
+
+</head>
+<body>
+
+<!-- ═════════════════════════════════════
+     LOGIN
+═════════════════════════════════════ -->
+
+<div id="screen-login" class="screen active">
+<div class="login-shell">
+
+  <div class="login-headline">
+    <div class="brand-logo" style="font-size:68px">
+      <span class="brand-iron">IRON</span>
+      <span class="brand-barbell">
+        <!-- Barbell SVG acting as the L in LEDGER -->
+        <svg width="52" height="74" viewBox="0 0 52 74" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 2px">
+          <!-- Left weight plate outer -->
+          <rect x="0" y="18" width="10" height="38" rx="2" fill="#f7931a"/>
+          <!-- Left weight plate inner groove -->
+          <rect x="2" y="22" width="6" height="30" rx="1" fill="#cc7815" opacity="0.6"/>
+          <!-- Left collar -->
+          <rect x="10" y="26" width="5" height="22" rx="1" fill="#d4840f"/>
+          <!-- Bar going through center (vertical — the L stem) -->
+          <rect x="22" y="0" width="8" height="74" rx="2" fill="#f7931a"/>
+          <!-- Right collar -->
+          <rect x="37" y="26" width="5" height="22" rx="1" fill="#d4840f"/>
+          <!-- Right weight plate outer -->
+          <rect x="42" y="18" width="10" height="38" rx="2" fill="#f7931a"/>
+          <!-- Right weight plate inner groove -->
+          <rect x="44" y="22" width="6" height="30" rx="1" fill="#cc7815" opacity="0.6"/>
+          <!-- L base foot (horizontal bottom of the L) -->
+          <rect x="22" y="62" width="30" height="8" rx="2" fill="#f7931a"/>
+          <!-- Knurling marks on bar -->
+          <rect x="23" y="10" width="6" height="1.5" rx="0.5" fill="#cc7815" opacity="0.5"/>
+          <rect x="23" y="14" width="6" height="1.5" rx="0.5" fill="#cc7815" opacity="0.5"/>
+          <rect x="23" y="52" width="6" height="1.5" rx="0.5" fill="#cc7815" opacity="0.5"/>
+          <rect x="23" y="56" width="6" height="1.5" rx="0.5" fill="#cc7815" opacity="0.5"/>
+          <!-- Weight plate bolt holes -->
+          <circle cx="5" cy="37" r="2.5" fill="#000" opacity="0.35"/>
+          <circle cx="47" cy="37" r="2.5" fill="#000" opacity="0.35"/>
+        </svg>
+      </span>
+      <span class="brand-edger">EDGER</span>
+    </div>
+    <span class="login-tagline">Proof of Workout · Built on Nostr · Powered by Bitcoin</span>
+  </div>
+
+  <div class="method-tabs">
+    <button class="mtab active" onclick="switchTab('qr',this)">📱 SCAN TO LOGIN</button>
+    <button class="mtab" onclick="switchTab('ext',this)">🔌 EXTENSION</button>
+    <button class="mtab" onclick="switchTab('demo',this)">👁 DEMO</button>
+  </div>
+
+  <div class="method-panel">
+
+```
+<!-- ── QR / nostrconnect flow ── -->
+<div class="mp-inner active" id="tab-qr">
+
+  <div class="qr-step-label">// Connect with Primal, Amber, or any NIP-46 signer</div>
+
+  <!-- TWO COLUMN: QR left, URI paste right -->
+  <div class="connect-two-col">
+
+    <!-- LEFT: QR code -->
+    <div class="connect-col-qr">
+      <div class="connect-col-hd">
+        <span class="connect-col-icon">📱</span>
+        <span class="connect-col-title">SCAN QR CODE</span>
+      </div>
+      <div class="qr-wrap" id="qr-wrap">
+        <div class="qr-scan-line"></div>
+        <div id="qr-placeholder">
+          <div class="qr-spinner"></div>
+          <div style="font-size:9px;color:var(--g6);letter-spacing:2px;text-transform:uppercase">GENERATING...</div>
+        </div>
+        <div id="qr-canvas" style="display:none"></div>
+      </div>
+      <div style="font-size:9px;color:var(--g6);letter-spacing:1px;text-align:center;margin-top:8px;line-height:1.5">
+        Primal → Settings → Nostr Connect → Scan QR
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="connect-divider">
+      <div class="connect-divider-line"></div>
+      <div class="connect-divider-or">OR</div>
+      <div class="connect-divider-line"></div>
+    </div>
+
+    <!-- RIGHT: Copy/paste URI -->
+    <div class="connect-col-uri">
+      <div class="connect-col-hd">
+        <span class="connect-col-icon">🔗</span>
+        <span class="connect-col-title">COPY URI</span>
+      </div>
+
+      <div class="uri-box">
+        <div class="uri-box-label">nostrconnect:// URI</div>
+        <textarea class="uri-textarea" id="qr-uri-display" readonly onclick="this.select()" placeholder="Generating..."></textarea>
+        <button class="btn-copy-uri" id="btn-copy-uri" onclick="copyURI()">📋 COPY TO CLIPBOARD</button>
+      </div>
+
+      <div style="font-size:9px;color:var(--g6);letter-spacing:1px;line-height:1.6;margin-top:8px">
+        Paste into Primal → Settings → Nostr Connect → Connect with URI<br>
+        Or use Amber, nsecbunker, or any NIP-46 signer app.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Status row -->
+  <div class="qr-status" id="qr-status" style="margin-top:12px">
+    <div class="qr-status-dot" id="qr-status-dot"></div>
+    <span id="qr-status-text" style="font-size:11px;color:var(--g7)">Waiting for signer to connect...</span>
+  </div>
+
+  <button class="btn-regen" onclick="initQRConnect()" style="margin-top:8px">↻ GENERATE NEW CODE</button>
+
+</div>
+
+<!-- ── Extension flow ── -->
+<div class="mp-inner" id="tab-ext">
+  <div style="font-size:8px;letter-spacing:5px;text-transform:uppercase;color:var(--orange);margin-bottom:10px">// NIP-07 Browser Extension</div>
+  <div style="font-size:12px;color:var(--g7);line-height:1.7;margin-bottom:14px">Use Alby, nos2x, Flamingo, or any NIP-07 extension. Must be installed and unlocked before clicking Connect.</div>
+  <div class="nip07-detect">
+    <div class="detect-dot" id="detect-dot"></div>
+    <span style="font-size:11px;color:var(--g7)" id="detect-txt">Checking for extension...</span>
+  </div>
+  <button class="btn-primary" id="btn-ext" onclick="loginNIP07()">CONNECT EXTENSION</button>
+</div>
+
+<!-- ── Demo flow ── -->
+<div class="mp-inner" id="tab-demo">
+  <div style="font-size:8px;letter-spacing:5px;text-transform:uppercase;color:var(--orange);margin-bottom:10px">// Demo Mode</div>
+  <div style="font-size:12px;color:var(--g7);line-height:1.7;margin-bottom:14px">Generates a temporary Nostr keypair in your browser. Events publish to real relays. Keypair resets on reload — use only to explore.</div>
+  <button class="btn-primary" onclick="loginDemo()">LAUNCH DEMO</button>
+</div>
+```
+
+  </div>
+
+  <div class="login-fine">
+    No email · No password · No custody · Your key stays on your device<br>
+    Every workout is a permanent signed event on the Nostr network.
+  </div>
+
+</div>
+</div>
+
+<!-- ═════════════════════════════════════
+     APP
+═════════════════════════════════════ -->
+
+<div id="screen-app" class="screen">
+
+  <div class="top-bar">
+    <div class="top-logo">
+      <div class="brand-logo" style="font-size:20px">
+        <span class="brand-iron">IRON</span>
+        <span class="brand-barbell">
+          <svg width="16" height="22" viewBox="0 0 52 74" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 1px;vertical-align:middle">
+            <rect x="0" y="18" width="10" height="38" rx="2" fill="#f7931a"/>
+            <rect x="2" y="22" width="6" height="30" rx="1" fill="#cc7815" opacity="0.6"/>
+            <rect x="10" y="26" width="5" height="22" rx="1" fill="#d4840f"/>
+            <rect x="22" y="0" width="8" height="74" rx="2" fill="#f7931a"/>
+            <rect x="37" y="26" width="5" height="22" rx="1" fill="#d4840f"/>
+            <rect x="42" y="18" width="10" height="38" rx="2" fill="#f7931a"/>
+            <rect x="44" y="22" width="6" height="30" rx="1" fill="#cc7815" opacity="0.6"/>
+            <rect x="22" y="62" width="30" height="8" rx="2" fill="#f7931a"/>
+            <circle cx="5" cy="37" r="2.5" fill="#000" opacity="0.35"/>
+            <circle cx="47" cy="37" r="2.5" fill="#000" opacity="0.35"/>
+          </svg>
+        </span>
+        <span class="brand-edger">EDGER</span>
+      </div>
+    </div>
+    <div class="top-tabs">
+      <button class="ttab active" onclick="showPage('feed',this)">Feed</button>
+      <button class="ttab" onclick="showPage('challenges',this)">Challenges</button>
+      <button class="ttab" onclick="showPage('relays',this)">Relays</button>
+      <button class="ttab" onclick="showPage('profile',this)">Profile</button>
+    </div>
+    <div class="top-right">
+      <div class="bal-pill"><span>⚡</span><span class="bal-val" id="bal">—</span></div>
+      <div id="user-pill"></div>
+    </div>
+  </div>
+
+  <div id="relay-bar">
+    <div class="rdot" id="rdot"></div>
+    <span id="rbar-txt" style="color:var(--g6);font-size:9px">CONNECTING</span>
+    <div class="rchips" id="rchips"></div>
+    <button onclick="document.getElementById('relay-bar').classList.remove('show')" style="margin-left:auto;background:transparent;border:none;color:var(--g6);font-size:12px">✕</button>
+  </div>
+
+  <!-- FEED -->
+
+  <div id="page-feed" class="pview active">
+    <div class="feed-wrap">
+      <div class="feed-main">
+        <div class="log-bar" onclick="openPost()">
+          <div class="log-av" id="log-av">?</div>
+          <div class="log-ph">Log today's workout...</div>
+          <span style="font-size:18px;color:var(--g5)">📸</span>
+        </div>
+        <div id="feed"></div>
+      </div>
+      <div class="sidebar">
+        <div class="scard">
+          <div class="scard-lbl">// Active Challenge</div>
+          <div class="scard-title">30 DAY<br>IRON STANDARD</div>
+          <div class="scard-body">
+            <div class="pbar"><div class="pbar-fill" style="width:63%"></div></div>
+            <div class="plbls"><span>Day 19</span><span>Day 30</span></div>
+            <div class="sc-mini">
+              <div class="scm"><div class="scm-v">127</div><div class="scm-l">Active</div></div>
+              <div class="scm"><div class="scm-v">23</div><div class="scm-l">Forfeited</div></div>
+              <div class="scm"><div class="scm-v">300K</div><div class="scm-l">Pool</div></div>
+              <div class="scm"><div class="scm-v">11</div><div class="scm-l">Days Left</div></div>
+            </div>
+            <button class="btn-primary" style="font-size:12px;padding:10px" onclick="toast('⚡ LN escrow challenge join — v2','ok')">⚡ JOIN NEXT ROUND</button>
+          </div>
+        </div>
+        <div class="scard">
+          <div class="scard-lbl">// Streak Leaders</div>
+          <div class="scard-title">TOP ATHLETES</div>
+          <div class="scard-body"><div id="lb"></div></div>
+        </div>
+        <div class="scard">
+          <div class="scard-body" style="padding-top:12px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+              <div style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite"></div>
+              <span style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:var(--green)">Spotter Bot Online</span>
+            </div>
+            <div id="relay-summary" style="font-size:10px;color:var(--g6);line-height:1.8">Connecting...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHALLENGES -->
+
+  <div id="page-challenges" class="pview">
+    <div style="max-width:700px;margin:0 auto;padding:28px 20px">
+      <div style="margin-bottom:24px">
+        <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">// On-Chain Logic</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:3px;line-height:1">CHOOSE YOUR BATTLE</div>
+        <div style="font-size:13px;color:var(--g7);margin-top:6px;line-height:1.6">Stakes lock via Lightning. Forfeits redistribute to completers. Spotter Bot enforces rules.</div>
+      </div>
+      <div id="challenges"></div>
+    </div>
+  </div>
+
+  <!-- RELAYS -->
+
+  <div id="page-relays" class="pview">
+    <div style="max-width:700px;margin:0 auto;padding:28px 20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:3px;margin-bottom:6px">RELAY STATUS</div>
+      <div style="font-size:13px;color:var(--g7);margin-bottom:20px;line-height:1.6">Iron Ledger publishes workout events (kind:31337) exclusively to your personal write relays fetched from your NIP-65 relay list (kind:10002).</div>
+      <div style="background:var(--g1);border:1px solid var(--b);padding:14px;margin-bottom:14px">
+        <div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:var(--orange);margin-bottom:8px">// Identity &amp; Signer</div>
+        <div id="relay-id" style="font-size:10px;color:var(--g7);line-height:1.9;font-family:'Courier New',monospace;word-break:break-all">Not connected</div>
+      </div>
+      <div id="relay-rows" style="display:flex;flex-direction:column;gap:2px;margin-bottom:16px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" style="flex:1;padding:11px;font-size:13px" onclick="reconnectAll()">RECONNECT</button>
+        <button class="btn-secondary" style="flex:1;padding:11px;font-size:13px" onclick="testPublish()">TEST PUBLISH</button>
+        <button class="btn-secondary" style="flex:1;padding:11px;font-size:13px" onclick="toggleElog()">EVENT LOG</button>
+        <button class="btn-secondary" style="flex:1;padding:11px;font-size:13px" onclick="signOut()">SIGN OUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+
+  <div id="page-profile" class="pview">
+    <div style="max-width:700px;margin:0 auto;padding:28px 20px" id="profile"></div>
+  </div>
+
+<button class="fab" onclick="openPost()">⚡ LOG WORKOUT</button>
+
+  <nav class="bnav">
+    <button class="bn active" onclick="showPage('feed',null,this)"><div class="bn-icon">📡</div><div class="bn-lbl">Feed</div></button>
+    <button class="bn" onclick="showPage('challenges',null,this)"><div class="bn-icon">⚔️</div><div class="bn-lbl">Battles</div></button>
+    <button class="bn" onclick="showPage('relays',null,this)"><div class="bn-icon">🔌</div><div class="bn-lbl">Relays</div></button>
+    <button class="bn" onclick="showPage('profile',null,this)"><div class="bn-icon">👤</div><div class="bn-lbl">Profile</div></button>
+  </nav>
+</div>
+
+<!-- POST MODAL -->
+
+<div class="overlay hidden" id="post-modal">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title">LOG WORKOUT</div><button class="modal-x" onclick="closeModal('post-modal')">✕</button></div>
+    <div class="modal-body">
+      <div>
+        <div class="flbl" style="margin-bottom:7px">Workout Type</div>
+        <div class="tgrid">
+          <div class="topt sel" onclick="selType(this,'Lifting')"><div class="topt-icon">🏋️</div><div class="topt-lbl">Lift</div></div>
+          <div class="topt" onclick="selType(this,'Running')"><div class="topt-icon">🏃</div><div class="topt-lbl">Run</div></div>
+          <div class="topt" onclick="selType(this,'Combat')"><div class="topt-icon">⚔️</div><div class="topt-lbl">Combat</div></div>
+          <div class="topt" onclick="selType(this,'Cycling')"><div class="topt-icon">🚴</div><div class="topt-lbl">Cycle</div></div>
+          <div class="topt" onclick="selType(this,'Walking')"><div class="topt-icon">🚶</div><div class="topt-lbl">Walk</div></div>
+          <div class="topt" onclick="selType(this,'Custom')"><div class="topt-icon">⚡</div><div class="topt-lbl">Custom</div></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><div class="flbl">Duration (min)</div><input type="number" class="finput" id="p-dur" placeholder="45" min="1"></div>
+        <div class="fg"><div class="flbl">Intensity (1–10)</div><input type="number" class="finput" id="p-int" placeholder="7" min="1" max="10"></div>
+      </div>
+      <div class="fg"><div class="flbl">Notes</div><textarea class="ftarea" id="p-notes" placeholder="What did you do? Community is watching."></textarea></div>
+      <div>
+        <div class="flbl" style="margin-bottom:6px">Proof Media</div>
+        <div class="upload-zone">
+          <input type="file" accept="image/*" multiple onchange="handleImgs(this)">
+          <span style="font-size:24px">📸</span>
+          <div style="font-size:11px;color:var(--g6)">Tap to attach proof photos</div>
+          <div style="font-size:9px;color:var(--g5);letter-spacing:1px">SHA-256 hash published as tamper-proof</div>
+        </div>
+        <div class="ipg" id="ipg"></div>
+      </div>
+      <div class="hash-row" id="hash-row"><span>🔐</span><span style="letter-spacing:2px">HASH:</span><span class="hash-val" id="hash-val"></span></div>
+      <div class="relay-info-bar" id="post-relay-bar">Publishing to your write relays...</div>
+      <button class="btn-post" id="btn-post" onclick="submitWorkout()">⚡ SIGN &amp; BROADCAST</button>
+    </div>
+  </div>
+</div>
+
+<!-- ZAP MODAL -->
+
+<div class="overlay hidden" id="zap-modal">
+  <div class="modal zap-wrap">
+    <div class="modal-hd"><div class="modal-title">⚡ ZAP</div><button class="modal-x" onclick="closeModal('zap-modal')">✕</button></div>
+    <div class="modal-body" id="zap-body">
+      <div id="zap-to" style="font-size:11px;color:var(--g6);letter-spacing:1px"></div>
+      <div class="zap-amts">
+        <button class="za" onclick="doZap(21)">21</button>
+        <button class="za" onclick="doZap(100)">100</button>
+        <button class="za" onclick="doZap(210)">210</button>
+        <button class="za" onclick="doZap(500)">500</button>
+        <button class="za" onclick="doZap(1000)">1,000</button>
+        <button class="za" onclick="doZap(2100)">2,100</button>
+      </div>
+      <div class="zcr">
+        <input type="number" class="zci" id="zci" placeholder="Custom (sats)...">
+        <button class="btn-zap" onclick="doZap(+document.getElementById('zci').value||0)">ZAP ⚡</button>
+      </div>
+    </div>
+    <div class="zap-status" id="zap-st"><div class="zsi" id="zsi">⚡</div><div class="zst" id="zst">Processing...</div></div>
+  </div>
+</div>
+
+<!-- Event log -->
+
+<div class="elog" id="elog">
+  <div class="elog-hd"><div class="elog-t">// Event Log</div><button class="elog-x" onclick="toggleElog()">✕</button></div>
+  <div class="elog-e" id="elog-e"></div>
+</div>
+
+<div class="lightbox hidden" id="lbox" onclick="closeLbox()"><img id="lbox-img" src="" alt=""></div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════════
+const NT = window.NostrTools || {};
+const { generateSecretKey, getPublicKey, finalizeEvent, nip19, nip44 } = NT;
+
+// Relays used for the NIP-46 handshake
+const HANDSHAKE_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
+  'wss://nos.lol',
+];
+
+// Bootstrap relays for NIP-65 discovery
+const BOOTSTRAP_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+];
+
+const POW_KIND = 31337;
+
+const S = {
+  // identity
+  pubkey: null, npub: null, displayName: null, signerMode: null,
+
+  // NIP-46 client-initiated state
+  nip46: {
+    localSk: null,       // client ephemeral sk
+    localPk: null,       // client ephemeral pk
+    remotePk: null,      // signer's pubkey (learned from connect response)
+    secret: null,        // random secret embedded in nostrconnect URI
+    relayWS: {},         // url -> WebSocket (handshake relays)
+    pending: {},         // reqId -> {resolve, reject, timeout}
+    connected: false,
+  },
+
+  // NIP-65 relay lists
+  writeRelays: [],
+  readRelays: [],
+
+  // Active relay pool
+  pool: {},            // url -> WebSocket
+  poolStatus: {},      // url -> string
+
+  // App state
+  posts: [],
+  zapTarget: null,
+  balance: 14210,
+  postImages: [],
+  imageHashes: [],
+  selectedType: 'Lifting',
+  currentNostrConnectURI: null,
+};
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  initQRConnect();
+  setTimeout(checkExtension, 500);
+});
+
+// ═══════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.mtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.mp-inner').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'ext') checkExtension();
+}
+
+// ═══════════════════════════════════════════════════════════
+// NIP-46 CLIENT-INITIATED: GENERATE nostrconnect:// URI
+// ═══════════════════════════════════════════════════════════
+function initQRConnect() {
+  // Reset state
+  S.nip46 = {
+    localSk: null, localPk: null, remotePk: null, secret: null,
+    relayWS: {}, pending: {}, connected: false,
+  };
+
+  // Close old handshake relay connections
+  Object.values(S.nip46.relayWS).forEach(ws => { try { ws.close(); } catch {} });
+
+  // Generate ephemeral client keypair
+  if (!generateSecretKey || !getPublicKey) {
+    setQRStatus('err', 'nostr-tools not loaded — refresh and try again');
+    return;
+  }
+
+  S.nip46.localSk = generateSecretKey();
+  S.nip46.localPk = getPublicKey(S.nip46.localSk);
+  S.nip46.secret = randomHex(16);
+
+  // Build nostrconnect:// URI
+  // Format: nostrconnect://<client-pubkey>?relay=...&secret=...&name=...&perms=...
+  const params = new URLSearchParams();
+  HANDSHAKE_RELAYS.forEach(r => params.append('relay', r));
+  params.set('secret', S.nip46.secret);
+  params.set('name', 'Iron ⚡edger');
+  params.set('url', 'https://ironledger.app');
+  params.set('perms', 'get_public_key,sign_event,nip44_encrypt,nip44_decrypt');
+
+  const uri = `nostrconnect://${S.nip46.localPk}?${params.toString()}`;
+  S.currentNostrConnectURI = uri;
+
+  log('nostrconnect:// URI generated', 'warn');
+  log(uri.slice(0, 80) + '…', 'warn');
+
+  // Render QR
+  renderQR(uri);
+
+  // Display URI in textarea for copy/paste
+  const disp = document.getElementById('qr-uri-display');
+  if (disp) {
+    disp.value = uri;
+    disp.placeholder = '';
+  }
+
+  setQRStatus('wait', 'Waiting for signer to connect...');
+
+  // Open handshake relay connections and listen for connect response
+  listenForConnect();
+}
+
+function renderQR(uri) {
+  const placeholder = document.getElementById('qr-placeholder');
+  const canvas = document.getElementById('qr-canvas');
+
+  if (placeholder) placeholder.style.display = 'none';
+  if (canvas) {
+    canvas.innerHTML = '';
+    canvas.style.display = 'block';
+    try {
+      new QRCode(canvas, {
+        text: uri,
+        width: 214,
+        height: 214,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } catch(e) {
+      // Fallback if QRCode lib fails
+      canvas.innerHTML = `<div style="font-size:9px;color:var(--g6);padding:8px;word-break:break-all;max-width:200px;text-align:center">QR library error — use Copy URI button</div>`;
+    }
+  }
+}
+
+function listenForConnect() {
+  HANDSHAKE_RELAYS.forEach(url => {
+    try {
+      const ws = new WebSocket(url);
+      S.nip46.relayWS[url] = ws;
+
+      ws.onopen = () => {
+        log('Handshake relay open: ' + url.replace('wss://',''), 'ok');
+        // Subscribe to encrypted responses tagged to our client pubkey
+        // The signer will send a kind:24133 event p-tagged to our localPk
+        ws.send(JSON.stringify(['REQ', 'nc-listen', {
+          kinds: [24133],
+          '#p': [S.nip46.localPk],
+          since: Math.floor(Date.now()/1000) - 5,
+        }]));
+      };
+
+      ws.onmessage = (e) => handleHandshakeMsg(url, e.data);
+      ws.onerror = () => log('Handshake relay error: ' + url.replace('wss://',''), 'err');
+    } catch(err) {
+      log('Failed to open handshake relay: ' + url, 'err');
+    }
+  });
+}
+
+function handleHandshakeMsg(url, raw) {
+  if (S.nip46.connected) return; // already done
+
+  try {
+    const msg = JSON.parse(raw);
+    if (!Array.isArray(msg) || msg[0] !== 'EVENT') return;
+    const event = msg[2];
+    if (!event || event.kind !== 24133) return;
+    if (!event.tags?.find(t => t[0] === 'p' && t[1] === S.nip46.localPk)) return;
+
+    // This is a response from the remote signer to our client pubkey
+    // The signer's pubkey is the author of this event
+    const signerPk = event.pubkey;
+
+    // Decrypt payload with NIP-44
+    if (!nip44) { log('nip44 not available', 'err'); return; }
+
+    const convKey = nip44.v2.utils.getConversationKey(S.nip46.localSk, signerPk);
+    const decrypted = nip44.v2.decrypt(convKey, event.content);
+    const response = JSON.parse(decrypted);
+
+    log('NIP-46 response: ' + JSON.stringify(response).slice(0, 100), 'ok');
+
+    // Check if this is a connect response
+    if (response.result === 'ack' || response.result === S.nip46.secret) {
+      // Connected! The signer's pk is now known
+      S.nip46.remotePk = signerPk;
+      S.nip46.connected = true;
+
+      setQRStatus('ok', 'Signer connected! Getting your public key...');
+      log('NIP-46 connect ack from: ' + signerPk.slice(0,16) + '…', 'ok');
+
+      // Now request user's actual pubkey
+      nip46Request('get_public_key', []).then(userPk => {
+        log('User pubkey: ' + userPk.slice(0,16) + '…', 'ok');
+        S.pubkey = userPk;
+        S.npub = nip19 ? nip19.npubEncode(userPk) : userPk.slice(0,8) + '…';
+        S.displayName = S.npub.slice(0,14) + '…';
+        S.signerMode = 'nip46';
+        finishLogin();
+      }).catch(err => {
+        setQRStatus('err', 'get_public_key failed: ' + err.message);
+        log('get_public_key error: ' + err.message, 'err');
+      });
+
+    } else if (response.id) {
+      // It's a response to a pending request
+      const pending = S.nip46.pending[response.id];
+      if (pending) {
+        clearTimeout(pending.timeout);
+        delete S.nip46.pending[response.id];
+        if (response.error) pending.reject(new Error(response.error));
+        else pending.resolve(response.result);
+      }
+    }
+  } catch(err) {
+    // Decryption failures are expected if events from other clients appear
+  }
+}
+
+// Send NIP-46 RPC request to remote signer
+async function nip46Request(method, params, timeoutMs = 45000) {
+  return new Promise(async (resolve, reject) => {
+    if (!S.nip46.remotePk || !S.nip46.localSk) {
+      return reject(new Error('NIP-46 not connected'));
+    }
+
+    const id = randomHex(8);
+    const payload = JSON.stringify({ id, method, params });
+
+    const convKey = nip44.v2.utils.getConversationKey(S.nip46.localSk, S.nip46.remotePk);
+    const encrypted = nip44.v2.encrypt(payload, convKey);
+
+    const template = {
+      kind: 24133,
+      created_at: Math.floor(Date.now()/1000),
+      tags: [['p', S.nip46.remotePk]],
+      content: encrypted,
+      pubkey: S.nip46.localPk,
+    };
+
+    const signed = finalizeEvent(template, S.nip46.localSk);
+    const msg = JSON.stringify(['EVENT', signed]);
+
+    const timeoutHandle = setTimeout(() => {
+      delete S.nip46.pending[id];
+      reject(new Error(`NIP-46 ${method} timed out`));
+    }, timeoutMs);
+
+    S.nip46.pending[id] = { resolve, reject, timeout: timeoutHandle };
+
+    // Send on all handshake relay connections
+    let sent = 0;
+    Object.values(S.nip46.relayWS).forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) { ws.send(msg); sent++; }
+    });
+    // Also send on pool connections if any
+    Object.values(S.pool).forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) { ws.send(msg); }
+    });
+
+    if (sent === 0) {
+      clearTimeout(timeoutHandle);
+      delete S.nip46.pending[id];
+      reject(new Error('No open relay connections for NIP-46'));
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// NIP-07 LOGIN
+// ═══════════════════════════════════════════════════════════
+function checkExtension() {
+  const dot = document.getElementById('detect-dot');
+  const txt = document.getElementById('detect-txt');
+  if (!dot || !txt) return;
+  if (window.nostr) {
+    dot.className = 'detect-dot yes';
+    txt.textContent = 'Extension detected — ready to connect';
+  } else {
+    dot.className = 'detect-dot no';
+    txt.innerHTML = 'No extension found. Install <strong>Alby</strong> (getAlby.com) or nos2x.';
+  }
+}
+
+async function loginNIP07() {
+  if (!window.nostr) { toast('No NIP-07 extension found', 'err'); return; }
+  try {
+    const pk = await window.nostr.getPublicKey();
+    S.pubkey = pk;
+    S.npub = nip19 ? nip19.npubEncode(pk) : pk.slice(0,8) + '…';
+    S.displayName = S.npub.slice(0,14) + '…';
+    S.signerMode = 'nip07';
+    log('NIP-07 login: ' + S.npub, 'ok');
+    await finishLogin();
+  } catch(e) { toast('Extension rejected: ' + e.message, 'err'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEMO LOGIN
+// ═══════════════════════════════════════════════════════════
+async function loginDemo() {
+  if (generateSecretKey && getPublicKey) {
+    S._demoSk = generateSecretKey();
+    S.pubkey = getPublicKey(S._demoSk);
+  } else {
+    S.pubkey = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  S.npub = nip19 ? nip19.npubEncode(S.pubkey) : 'npub1demo';
+  S.displayName = 'Demo User';
+  S.signerMode = 'ephemeral';
+  log('Demo: ephemeral keypair', 'warn');
+  await finishLogin();
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST-LOGIN SETUP
+// ═══════════════════════════════════════════════════════════
+async function finishLogin() {
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+
+  updateUserPill();
+  updateLogAv();
+  updateBal();
+  renderFeed();
+  renderLB();
+  renderChallenges();
+  renderProfile();
+  toast(`✓ Connected: ${S.displayName}`, 'ok');
+
+  await fetchNIP65Relays();
+}
+
+// ═══════════════════════════════════════════════════════════
+// NIP-65: FETCH USER RELAY LIST
+// ═══════════════════════════════════════════════════════════
+async function fetchNIP65Relays() {
+  log('Fetching kind:10002 relay list for ' + S.pubkey.slice(0,16) + '…', 'warn');
+
+  let found = false;
+  await new Promise(resolve => {
+    const timeout = setTimeout(resolve, 10000);
+    const bsWS = {};
+
+    BOOTSTRAP_RELAYS.forEach(url => {
+      try {
+        const ws = new WebSocket(url);
+        bsWS[url] = ws;
+        ws.onopen = () => {
+          ws.send(JSON.stringify(['REQ', 'nip65', { kinds:[10002], authors:[S.pubkey], limit:1 }]));
+        };
+        ws.onmessage = (e) => {
+          if (found) return;
+          try {
+            const m = JSON.parse(e.data);
+            if (m[0]==='EVENT' && m[2]?.kind===10002) {
+              found = true;
+              parseNIP65(m[2]);
+              clearTimeout(timeout);
+              Object.values(bsWS).forEach(w => { try { w.close(); } catch {} });
+              resolve();
+            }
+          } catch {}
+        };
+        ws.onerror = () => {};
+      } catch {}
+    });
+  });
+
+  if (!found) {
+    log('No NIP-65 found — using bootstrap relays', 'warn');
+    toast('⚠ No relay list found — using default relays', '');
+    S.writeRelays = [...BOOTSTRAP_RELAYS];
+    S.readRelays  = [...BOOTSTRAP_RELAYS];
+  }
+
+  connectPool();
+}
+
+function parseNIP65(event) {
+  const w = [], r = [];
+  (event.tags||[]).forEach(t => {
+    if (t[0]!=='r' || !t[1]?.startsWith('wss://')) return;
+    const mode = t[2];
+    if (!mode) { w.push(t[1]); r.push(t[1]); }
+    else if (mode==='write') w.push(t[1]);
+    else if (mode==='read')  r.push(t[1]);
+  });
+  S.writeRelays = w.length ? w : [...BOOTSTRAP_RELAYS];
+  S.readRelays  = r.length ? r : [...BOOTSTRAP_RELAYS];
+  log(`NIP-65: ${w.length} write, ${r.length} read relays`, 'ok');
+  toast(`📡 Relay list: ${w.length} write relay${w.length!==1?'s':''}`, 'ok');
+  updatePostRelayBar();
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELAY POOL
+// ═══════════════════════════════════════════════════════════
+function connectPool() {
+  const all = [...new Set([...S.writeRelays, ...S.readRelays])];
+  all.forEach(url => openRelay(url));
+  showRelayBar();
+  updateRelayPage();
+}
+
+function openRelay(url) {
+  if (S.pool[url]) return;
+  S.poolStatus[url] = 'connecting';
+  updateRelayBar();
+  try {
+    const ws = new WebSocket(url);
+    S.pool[url] = ws;
+    ws.onopen = () => {
+      S.poolStatus[url] = 'open';
+      log('Connected: ' + url.replace('wss://',''), 'ok');
+      ws.send(JSON.stringify(['REQ', 'pow-feed', { kinds:[POW_KIND], limit:20 }]));
+      // Re-subscribe NIP-46 listener here too so we can keep signing after connection
+      if (S.nip46.localPk) {
+        ws.send(JSON.stringify(['REQ', 'nc-pool', { kinds:[24133], '#p':[S.nip46.localPk], since: Math.floor(Date.now()/1000)-5 }]));
+      }
+      updateRelayBar(); updateRelayPage();
+    };
+    ws.onerror = () => { S.poolStatus[url]='error'; updateRelayBar(); updateRelayPage(); };
+    ws.onclose = () => {
+      S.poolStatus[url]='closed'; updateRelayBar();
+      setTimeout(() => { if (S.poolStatus[url]==='closed') { delete S.pool[url]; openRelay(url); } }, 7000);
+    };
+    ws.onmessage = (e) => {
+      try {
+        const m = JSON.parse(e.data);
+        if (m[0]==='EVENT' && m[2]?.kind===POW_KIND) ingestEvent(m[2]);
+        // Also handle NIP-46 responses on pool relays for ongoing signing
+        if (m[0]==='EVENT' && m[2]?.kind===24133) handleHandshakeMsg(url, e.data);
+      } catch {}
+    };
+  } catch { S.poolStatus[url]='error'; }
+}
+
+function reconnectAll() {
+  Object.keys(S.pool).forEach(u => { try { S.pool[u].close(); } catch {}; delete S.pool[u]; });
+  setTimeout(connectPool, 400);
+  toast('Reconnecting...', 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════
+// EVENT SIGNING
+// ═══════════════════════════════════════════════════════════
+async function signEvent(tpl) {
+  tpl.pubkey = S.pubkey;
+  if (S.signerMode === 'nip46' && S.nip46.connected) {
+    const res = await nip46Request('sign_event', [JSON.stringify(tpl)], 45000);
+    return JSON.parse(res);
+  }
+  if (S.signerMode === 'nip07' && window.nostr) {
+    return await window.nostr.signEvent(tpl);
+  }
+  if (S.signerMode === 'ephemeral' && S._demoSk && finalizeEvent) {
+    return finalizeEvent(tpl, S._demoSk);
+  }
+  return { ...tpl, id:'demo-'+Date.now(), sig:'0'.repeat(128) };
+}
+
+async function publishEvent(tpl) {
+  let signed;
+  try { signed = await signEvent(tpl); }
+  catch(e) { log('Sign failed: '+e.message,'err'); toast('Sign failed: '+e.message,'err'); return null; }
+
+  const msg = JSON.stringify(['EVENT', signed]);
+  const targets = S.writeRelays.length ? S.writeRelays : BOOTSTRAP_RELAYS;
+  let n = 0;
+  targets.forEach(url => {
+    const ws = S.pool[url];
+    if (ws?.readyState === WebSocket.OPEN) { ws.send(msg); n++; log('Published to '+url.replace('wss://',''),'ok'); }
+  });
+  if (!n) { log('No open write relays','warn'); toast('⚠ No relay — stored locally','err'); }
+  else toast(`⚡ Broadcast to ${n} relay${n>1?'s':''}`, 'ok');
+  return signed;
+}
+
+// ═══════════════════════════════════════════════════════════
+// WORKOUT SUBMISSION
+// ═══════════════════════════════════════════════════════════
+async function submitWorkout() {
+  const dur = document.getElementById('p-dur').value;
+  const intensity = document.getElementById('p-int').value;
+  const notes = document.getElementById('p-notes').value;
+  if (!dur||+dur<1) { toast('Add a duration','err'); return; }
+
+  const btn = document.getElementById('btn-post');
+  btn.disabled = true;
+  btn.textContent = S.signerMode==='nip46' ? 'APPROVE ON YOUR PHONE…' : 'SIGNING…';
+
+  const tags = [
+    ['workout', S.selectedType], ['duration', dur], ['intensity', String(intensity||7)],
+    ['streak','13'], ['username', S.displayName||'anon'],
+    ['client','Iron Ledger'], ['t','ironledger'], ['t','proofofworkout'], ['t','bitcoin'],
+  ];
+  S.imageHashes.forEach((h,i) => { tags.push(['mediahash',h]); if(S.postImages[i]) tags.push(['img',S.postImages[i].slice(0,200)]); });
+
+  const tpl = {
+    kind: POW_KIND, created_at: Math.floor(Date.now()/1000), tags,
+    content: notes || `${S.selectedType} · ${dur} min · intensity ${intensity||7}/10`,
+  };
+
+  const signed = await publishEvent(tpl);
+  btn.disabled = false;
+  btn.textContent = '⚡ SIGN & BROADCAST';
+
+  if (signed) {
+    prependPost({ eventId:signed.id, pubkey:S.pubkey, user:S.displayName||'you', avatar:(S.displayName||'Y')[0].toUpperCase(), type:S.selectedType, duration:+dur, intensity:+(intensity||7), streak:13, caption:notes||tpl.content, images:[...S.postImages], mediaHash:S.imageHashes[0]||null, zapTotal:0, cosigns:0, comments:[], time:'just now', verified:false });
+    closeModal('post-modal'); resetPostForm();
+    setTimeout(()=>toast('🤖 Spotter Bot reviewing…','ok'),1400);
+    setTimeout(()=>toast('✅ Streak +1 — verified','ok'),3200);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMAGE HASHING
+// ═══════════════════════════════════════════════════════════
+async function handleImgs(input) {
+  const files = Array.from(input.files).slice(0,3);
+  S.postImages=[]; S.imageHashes=[];
+  const pg=document.getElementById('ipg'); pg.innerHTML='';
+  for (const f of files) {
+    const d = await readFile(f);
+    S.postImages.push(d);
+    const buf = await f.arrayBuffer();
+    const hb = await crypto.subtle.digest('SHA-256', buf);
+    const hex = [...new Uint8Array(hb)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    S.imageHashes.push(hex);
+    const img=document.createElement('img'); img.className='ipr'; img.src=d; pg.appendChild(img);
+  }
+  if (S.imageHashes.length) {
+    const hr=document.getElementById('hash-row'); hr.style.display='flex';
+    document.getElementById('hash-val').textContent=S.imageHashes[0].slice(0,32)+'…';
+    toast('🔐 Proof hash computed','ok');
+  }
+}
+const readFile = f => new Promise(r => { const fr=new FileReader(); fr.onload=e=>r(e.target.result); fr.readAsDataURL(f); });
+
+// ═══════════════════════════════════════════════════════════
+// FEED
+// ═══════════════════════════════════════════════════════════
+const IMGS = [
+  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80',
+  'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&q=80',
+  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80',
+  'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&q=80',
+  'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=600&q=80',
+];
+const SEED = [
+  { eventId:'s1', pubkey:'pk1', user:'satoshi_lifts', avatar:'S', verified:true, type:'Lifting', duration:75, intensity:9, streak:21, caption:'Deadlift PR. 405lbs. Stack sats, stack plates.', images:[IMGS[0]], mediaHash:'a3f5e7d2b1c9…', zapTotal:2100, cosigns:14, comments:[{user:'iron_hodlr',text:'BEAST. Form locked.',time:'2m'},{user:'spotter_bot',text:'✅ Wearable HR confirmed.',time:'4m'}], time:'18 min ago', lnAddr:'satoshi@getalby.com' },
+  { eventId:'s2', pubkey:'pk2', user:'k_runs_sats', avatar:'K', verified:false, type:'Running', duration:45, intensity:7, streak:8, caption:'Morning 5K. Just not quitting.', images:[IMGS[2],IMGS[4]], mediaHash:null, zapTotal:441, cosigns:7, comments:[{user:'streak_queen',text:'Day 8 is where people stop.',time:'12m'}], time:'1 hr ago', lnAddr:'k@getalby.com' },
+  { eventId:'s3', pubkey:'pk-user', user:'contra_intel', avatar:'B', verified:true, type:'Combat', duration:90, intensity:10, streak:12, caption:"Muay Thai sparring. Three rounds. Last round I wanted to stop. Didn't. That's the whole lesson.", images:[IMGS[1],IMGS[3]], mediaHash:'b2d4f6e8a0c3…', zapTotal:3300, cosigns:22, comments:[{user:'iron_hodlr',text:'Discipline bleeds into everything.',time:'35m'}], time:'2 hr ago', lnAddr:'contra@getalby.com' },
+  { eventId:'s4', pubkey:'pk4', user:'sovereign_steps', avatar:'SS', verified:false, type:'Walking', duration:30, intensity:4, streak:5, caption:"Just a walk. A walk counts. Don't let perfect be the enemy of done.", images:[], mediaHash:null, zapTotal:210, cosigns:9, comments:[], time:'3 hr ago', lnAddr:null },
+];
+
+function renderFeed() { S.posts=[...SEED]; const el=document.getElementById('feed'); if(el)el.innerHTML=SEED.map((p,i)=>postHTML(p,i)).join(''); }
+function ingestEvent(ev) {
+  if (S.posts.find(p=>p.eventId===ev.id)) return;
+  const t={}; (ev.tags||[]).forEach(t2=>{if(!t[t2[0]])t[t2[0]]=[];t[t2[0]].push(t2.slice(1));});
+  const p={ eventId:ev.id, pubkey:ev.pubkey, user:t.username?.[0]?.[0]||ev.pubkey.slice(0,10), avatar:(t.username?.[0]?.[0]||'?')[0].toUpperCase(), type:t.workout?.[0]?.[0]||'Custom', duration:+t.duration?.[0]?.[0]||0, intensity:+t.intensity?.[0]?.[0]||0, streak:+t.streak?.[0]?.[0]||1, caption:ev.content, images:(t.img||[]).map(i=>i[0]).filter(Boolean), mediaHash:t.mediahash?.[0]?.[0]||null, zapTotal:0, cosigns:0, comments:[], time:timeAgo(ev.created_at), verified:false, fromRelay:true };
+  S.posts.unshift(p); prependPost(p); log('Event from relay: @'+p.user,'ok');
+}
+function prependPost(p) {
+  const el=document.getElementById('feed'); if(!el)return;
+  S.posts.unshift(p);
+  const d=document.createElement('div'); d.innerHTML=postHTML(p,0); el.insertBefore(d.firstChild,el.firstChild);
+}
+
+function postHTML(p, delay=0) {
+  const ic=Math.min(p.images.length,3);
+  const imgs=ic?`<div class="wc-imgs c${ic}">${p.images.map(s=>`<img class="wci" src="${s}" alt="" onclick="openLbox('${s}')" loading="lazy">`).join('')}</div>`:'';
+  const hash=p.mediaHash?`<div class="proof-row">🔐 <span style="color:var(--g6);letter-spacing:1px;font-size:9px">HASH:</span><span class="proof-hash">${p.mediaHash}</span></div>`:'';
+  const cmts=p.comments.map(c=>`<div class="cmt"><div class="cmt-av">${c.user[0].toUpperCase()}</div><div><div class="cmt-user">${c.user}</div><div class="cmt-text">${c.text}</div><div class="cmt-meta"><button class="cmt-act" onclick="zapCmt(this,21)">⚡ Zap</button><span style="color:var(--g5);font-size:9px;margin-left:6px">${c.time}</span></div></div></div>`).join('');
+  const id=p.eventId;
+  return `<div class="wcard ${p.verified?'vfd':''}" id="post-${id}" style="animation-delay:${delay*0.07}s">
+    <div class="wc-head">
+      <div class="wc-av">${p.avatar}</div>
+      <div><div class="wc-uname">@${p.user}${p.verified?'<div class="vbadge">✓</div>':''}</div><div class="wc-meta">${p.time}${p.fromRelay?' · relay':''}</div></div>
+      <div class="streak-b">🔥 ${p.streak}d</div>
+    </div>
+    <div class="wc-type">${tIcon(p.type)} ${p.type}</div>
+    <div class="wc-stats">
+      <div class="wcs"><div class="wcs-v">${p.duration}</div><div class="wcs-l">min</div></div>
+      <div class="wcs"><div class="wcs-v">${p.intensity}/10</div><div class="wcs-l">intensity</div></div>
+      <div class="wcs"><div class="wcs-v" id="cc-${id}">${p.cosigns}</div><div class="wcs-l">cosigns</div></div>
+    </div>
+    ${imgs}<div class="wc-body">${p.caption}</div>${hash}
+    <div class="wc-acts">
+      <button class="act zap" id="zb-${id}" onclick="openZap('${id}')">⚡ <span id="zc-${id}">${fmtS(p.zapTotal)}</span></button>
+      <button class="act cos" id="csb-${id}" onclick="cosign('${id}',this)">✓ Cosign</button>
+      <button class="act" onclick="toggleCmts('${id}')">💬 <span id="cct-${id}">${p.comments.length}</span></button>
+      <button class="act" onclick="sharePost('${id}')">📤</button>
+    </div>
+    <div class="cmts" id="cmts-${id}">
+      <div class="cmt-list">${cmts}</div>
+      <div class="cmt-row">
+        <div class="cmt-av">${(S.displayName||'?')[0].toUpperCase()}</div>
+        <input class="cmt-inp" placeholder="Encouragement..." id="ci-${id}" onkeydown="if(event.key==='Enter')submitCmt('${id}')">
+        <button class="btn-cmt" onclick="submitCmt('${id}')">SEND</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════════════════
+function toggleCmts(id) { document.getElementById('cmts-'+id)?.classList.toggle('open'); }
+async function submitCmt(id) {
+  const inp=document.getElementById('ci-'+id); const txt=inp?.value.trim(); if(!txt)return;
+  const p=findPost(id); if(!p)return;
+  const d=document.createElement('div'); d.className='cmt'; d.innerHTML=`<div class="cmt-av">${(S.displayName||'Y')[0].toUpperCase()}</div><div><div class="cmt-user">${S.displayName||'you'}</div><div class="cmt-text">${txt}</div><div class="cmt-meta"><span style="color:var(--g5);font-size:9px">just now</span></div></div>`;
+  document.querySelector('#cmts-'+id+' .cmt-list')?.appendChild(d);
+  inp.value=''; p.comments.push({user:S.displayName||'you',text:txt,time:'now'});
+  const cc=document.getElementById('cct-'+id); if(cc)cc.textContent=p.comments.length;
+  publishEvent({ kind:1, created_at:Math.floor(Date.now()/1000), tags:[['e',id],['p',p.pubkey||''],['t','ironledger']], content:txt });
+}
+function cosign(id,btn) {
+  if(btn.classList.contains('done')){toast('Already cosigned','err');return;}
+  if(S.balance<500){toast('Need 500 sats','err');return;}
+  S.balance-=500; updateBal();
+  const p=findPost(id); if(p)p.cosigns++;
+  btn.classList.add('done');
+  const cc=document.getElementById('cc-'+id); if(cc)cc.textContent=p?.cosigns||0;
+  toast('✅ Cosigned — 500 sats staked','ok');
+  publishEvent({ kind:7, created_at:Math.floor(Date.now()/1000), tags:[['e',id],['t','cosign']], content:'✅' });
+}
+function zapCmt(btn,amt) { S.balance=Math.max(0,S.balance-amt); updateBal(); btn.textContent='⚡'+amt; btn.style.color='var(--orange)'; }
+function sharePost(id) { toast('Event: '+(findPost(id)?.eventId||'local').slice(0,16)+'…','ok'); }
+
+// ── ZAP ──
+function openZap(id) {
+  const p=findPost(id);
+  S.zapTarget={postId:id, lnAddr:p?.lnAddr||null, recipientPk:p?.pubkey||null, eventId:p?.eventId||null};
+  document.getElementById('zap-to').textContent=`Zapping @${p?.user||'?'}`;
+  document.getElementById('zap-body').style.display='block';
+  document.getElementById('zap-st').className='zap-status';
+  document.getElementById('zap-modal').classList.remove('hidden');
+}
+async function doZap(amt) {
+  if(!amt||amt<1){toast('Enter amount','err');return;}
+  const t=S.zapTarget;
+  if(window.webln) {
+    setZapSt('⚡','Requesting payment…');
+    try {
+      await window.webln.enable();
+      if(t?.lnAddr) {
+        const [n,d]=t.lnAddr.split('@');
+        const lr=await fetch(`https://${d}/.well-known/lnurlp/${n}`);
+        const ld=await lr.json();
+        let cb=`${ld.callback}?amount=${amt*1000}`;
+        if(ld.allowsNostr&&ld.nostrPubkey) {
+          const zr=await signEvent({ kind:9734, created_at:Math.floor(Date.now()/1000), tags:[['relays',...S.writeRelays],['amount',String(amt*1000)],['p',t.recipientPk],...(t.eventId?[['e',t.eventId]]:[])], content:'' });
+          cb+=`&nostr=${encodeURIComponent(JSON.stringify(zr))}`;
+        }
+        const ir=await fetch(cb); const id2=await ir.json();
+        await window.webln.sendPayment(id2.pr);
+      }
+      simZap(t?.postId,amt); setZapSt('✅',`${amt.toLocaleString()} sats zapped! ⚡`);
+      setTimeout(()=>closeModal('zap-modal'),2000); return;
+    } catch(e) { setZapSt('⚠️','WebLN error: '+e.message); setTimeout(()=>closeModal('zap-modal'),2500); return; }
+  }
+  setZapSt('⚡',`Simulating ${amt.toLocaleString()} sat zap… (install Alby for real zaps)`);
+  setTimeout(()=>{ simZap(t?.postId,amt); setZapSt('✅',`${amt.toLocaleString()} sats (demo)`); setTimeout(()=>closeModal('zap-modal'),1800); },700);
+}
+function simZap(id,amt) {
+  const p=findPost(id); if(p){p.zapTotal+=amt;const e=document.getElementById('zc-'+id);if(e)e.textContent=fmtS(p.zapTotal);const b=document.getElementById('zb-'+id);if(b){b.classList.add('fired');setTimeout(()=>b.classList.remove('fired'),400);}}
+  S.balance=Math.max(0,S.balance-amt); updateBal();
+}
+function setZapSt(icon,txt) { document.getElementById('zap-body').style.display='none'; const s=document.getElementById('zap-st');s.className='zap-status show'; document.getElementById('zsi').textContent=icon; document.getElementById('zst').textContent=txt; }
+
+// ═══════════════════════════════════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════════════════════════════════
+function renderLB() {
+  const el=document.getElementById('lb'); if(!el)return;
+  el.innerHTML=[{r:1,u:'iron_hodlr',av:'IH',s:87},{r:2,u:'satoshi_lifts',av:'S',s:21},{r:3,u:'contra_intel',av:'B',s:12},{r:4,u:'k_runs_sats',av:'K',s:8},{r:5,u:'sovereign_steps',av:'SS',s:5}]
+    .map(p=>`<div class="lb-row"><div class="lb-rank ${p.r<=3?'top':''}">${p.r}</div><div class="lb-av">${p.av}</div><div class="lb-name">@${p.u}</div><div class="lb-s">${p.s}d</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHALLENGES
+// ═══════════════════════════════════════════════════════════
+function renderChallenges() {
+  const el=document.getElementById('challenges'); if(!el)return;
+  el.innerHTML=[
+    {n:'7-Day Grind',d:'7 Days',stake:2000,p:89,dr:11,pool:178000,l:3,prog:57,desc:'Any workout. One per day. Walk counts.',tag:'BEGINNER',tc:'var(--green)'},
+    {n:'30-Day Iron Standard',d:'30 Days',stake:2000,p:127,dr:23,pool:300000,l:11,prog:63,desc:'Full month. Cosign required.',tag:'MOST POPULAR',tc:'var(--orange)'},
+    {n:'100-Day Legend',d:'100 Days',stake:2000,p:21,dr:4,pool:50000,l:72,prog:28,desc:'Triple digits. Spot checks.',tag:'ELITE',tc:'#b388ff'},
+  ].map(c=>`<div style="background:var(--g1);border:1px solid var(--b);padding:20px;margin-bottom:2px;transition:border-color 0.15s" onmouseover="this.style.borderColor='rgba(255,255,255,0.11)'" onmouseout="this.style.borderColor='var(--b)'">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div><div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:${c.tc};margin-bottom:4px">${c.tag}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px">${c.n}</div><div style="font-size:12px;color:var(--g7);margin-top:3px">${c.desc}</div></div>
+      <div style="text-align:right;margin-left:14px"><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g6)">Pool</div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--orange)">${(c.pool/1000).toFixed(0)}K</div><div style="font-size:8px;color:var(--g6)">sats</div></div>
+    </div>
+    <div style="height:2px;background:var(--g3);margin-bottom:5px"><div style="height:100%;width:${c.prog}%;background:var(--orange)"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g6);margin-bottom:14px"><span>${c.d}</span><span>${c.p} active · ${c.dr} out · ${c.l}d left</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <button class="btn-primary" style="font-size:12px;padding:10px" onclick="joinChallenge('${c.n}',${c.stake})">⚡ JOIN — ${c.stake.toLocaleString()} SATS</button>
+      <button class="btn-secondary" style="font-size:12px;padding:10px" onclick="toast('Miss a day = forfeit. Complete = stake + forfeits.','ok')">RULES</button>
+    </div>
+  </div>`).join('');
+}
+async function joinChallenge(n,stake) {
+  if(S.balance<stake){toast('Insufficient balance','err');return;}
+  S.balance-=stake; updateBal();
+  toast(`⚡ Staked ${stake.toLocaleString()} sats — joined "${n}"`, 'ok');
+  setTimeout(()=>toast('🤖 Spotter Bot now watching your npub','ok'),1200);
+  publishEvent({ kind:30000, created_at:Math.floor(Date.now()/1000), tags:[['challenge',n],['stake',String(stake)],['t','ironledger']], content:`Joined: ${n}` });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════════
+function renderProfile() {
+  const el=document.getElementById('profile'); if(!el)return;
+  const nm=S.displayName||'—'; const np=S.npub||'Not connected';
+  const sm={nip46:'🔐 NIP-46 Primal / Bunker',nip07:'🟠 NIP-07 Extension',ephemeral:'⚡ Demo Keypair'}[S.signerMode]||'—';
+  el.innerHTML=`<div style="background:var(--g1);border:1px solid var(--b);padding:24px;margin-bottom:2px;display:flex;align-items:center;gap:20px">
+    <div style="width:70px;height:70px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--black);flex-shrink:0">${(nm[0]||'?').toUpperCase()}</div>
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px">${nm.toUpperCase()}</div>
+      <div style="font-size:10px;color:var(--g6);font-family:'Courier New',monospace;margin-top:2px;word-break:break-all">${np}</div>
+      <div style="font-size:10px;color:var(--orange);margin-top:4px;letter-spacing:1px">${sm}</div>
+    </div>
+  </div>
+  <div style="background:var(--g1);border:1px solid var(--b);padding:14px;margin-bottom:2px">
+    <div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:var(--orange);margin-bottom:8px">// Your Write Relays (NIP-65)</div>
+    <div style="font-size:10px;color:var(--g6);font-family:'Courier New',monospace;line-height:1.9">${S.writeRelays.length?S.writeRelays.map(r=>`<div style="padding:3px 0;border-bottom:1px solid var(--b)">✓ ${r}</div>`).join(''):'<div style="color:var(--orange)">Loading...</div>'}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-bottom:2px">
+    ${[['12','Streak'],['47','Workouts'],['14,210','Sats'],['3','Wins']].map(([v,l])=>`<div style="background:var(--g1);border:1px solid var(--b);padding:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--orange)">${v}</div><div style="font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--g6);margin-top:2px">${l}</div></div>`).join('')}
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn-secondary" style="flex:1" onclick="signOut()">SIGN OUT</button>
+    <button class="btn-primary" style="flex:1" onclick="openPost()">⚡ LOG WORKOUT</button>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELAY UI
+// ═══════════════════════════════════════════════════════════
+function showRelayBar() {
+  document.getElementById('relay-bar').classList.add('show');
+  setTimeout(()=>document.getElementById('relay-bar').classList.remove('show'),8000);
+}
+function updateRelayBar() {
+  const urls=[...new Set([...S.writeRelays,...S.readRelays,...BOOTSTRAP_RELAYS.slice(0,2)])];
+  const open=urls.filter(u=>S.poolStatus[u]==='open').length;
+  const dot=document.getElementById('rdot');
+  dot.className='rdot '+(open===urls.length&&urls.length?'up':open>0?'mid':'down');
+  document.getElementById('rbar-txt').textContent=`${open}/${urls.length} RELAYS`;
+  const chips=document.getElementById('rchips');
+  chips.innerHTML=[...new Set([...S.writeRelays,...BOOTSTRAP_RELAYS.slice(0,2)])].map(u=>{
+    const s=S.poolStatus[u]||'?'; const mine=S.writeRelays.includes(u);
+    return `<div class="rchip ${s==='open'?'up':s==='error'?'err':''} ${mine?'mine':''}">${u.replace('wss://','').split('/')[0]}</div>`;
+  }).join('');
+  const sum=document.getElementById('relay-summary');
+  if(sum)sum.innerHTML=`<strong style="color:var(--text)">${open}</strong> relays connected<br>Publishing to <strong style="color:var(--orange)">${S.writeRelays.length}</strong> write relay${S.writeRelays.length!==1?'s':''}<br>Signer: <strong style="color:var(--orange)">${S.signerMode||'demo'}</strong>`;
+}
+function updateRelayPage() {
+  const rows=document.getElementById('relay-rows'); if(!rows)return;
+  const all=[...new Set([...S.writeRelays,...S.readRelays,...BOOTSTRAP_RELAYS])];
+  rows.innerHTML=all.map(u=>{
+    const s=S.poolStatus[u]||'pending';
+    const isW=S.writeRelays.includes(u), isR=S.readRelays.includes(u);
+    const type=isW&&isR?'READ+WRITE':isW?'WRITE':isR?'READ':'BOOTSTRAP';
+    const isUser=isW||isR;
+    const sl=s==='open'?'CONNECTED':s==='error'?'ERROR':s==='closed'?'CLOSED':'CONNECTING';
+    return `<div style="background:var(--g1);border:1px solid var(--b);padding:11px 14px;display:flex;align-items:center;gap:10px">
+      <div style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${s==='open'?'var(--green)':s==='error'?'var(--red)':'var(--orange)'}${s!=='open'&&s!=='error'?';animation:blink 1.5s infinite':''}"></div>
+      <div style="font-family:'Courier New',monospace;font-size:11px;flex:1">${u}</div>
+      <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;padding:2px 6px;border:1px solid ${isUser?'rgba(247,147,26,0.4)':'var(--b2)'};color:${isUser?'var(--orange)':'var(--g6)'}">${type}</div>
+      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:${s==='open'?'var(--green)':s==='error'?'var(--red)':'var(--orange)'}">${sl}</div>
+    </div>`;
+  }).join('');
+  const rid=document.getElementById('relay-id'); if(!rid)return;
+  rid.innerHTML=S.pubkey?`Pubkey: ${S.pubkey}<br>Npub: ${S.npub}<br>Signer: ${S.signerMode}`:'Not connected';
+}
+
+function updatePostRelayBar() {
+  const el=document.getElementById('post-relay-bar'); if(!el)return;
+  const r=S.writeRelays.length?S.writeRelays:BOOTSTRAP_RELAYS;
+  el.textContent='Publishing to: '+r.map(u=>u.replace('wss://','').split('/')[0]).join(', ');
+}
+
+async function testPublish() {
+  toast('Publishing test event…','ok');
+  await publishEvent({ kind:1, created_at:Math.floor(Date.now()/1000), tags:[['t','ironledger'],['t','test']], content:'Iron ⚡edger test event. #ironledger' });
+}
+
+// ═══════════════════════════════════════════════════════════
+// QR STATUS UI
+// ═══════════════════════════════════════════════════════════
+function setQRStatus(state, text) {
+  const dot=document.getElementById('qr-status-dot');
+  const txt=document.getElementById('qr-status-text');
+  if(dot) dot.className='qr-status-dot '+(state==='ok'?'ok':state==='err'?'err':'');
+  if(txt) txt.textContent=text;
+}
+
+function copyURI() {
+  const uri = S.currentNostrConnectURI;
+  if (!uri) return;
+  navigator.clipboard.writeText(uri).catch(()=>{
+    // fallback: select the textarea
+    const ta = document.getElementById('qr-uri-display');
+    if (ta) { ta.select(); document.execCommand('copy'); }
+  });
+  const btn=document.getElementById('btn-copy-uri');
+  if(btn){btn.textContent='✓ COPIED!';btn.classList.add('ok');setTimeout(()=>{btn.textContent='📋 COPY TO CLIPBOARD';btn.classList.remove('ok');},2000);}
+  toast('nostrconnect:// URI copied — paste into Primal','ok');
+}
+
+// ═══════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════
+function showPage(name,nb,bb) {
+  document.querySelectorAll('.pview').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  if(nb){document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));nb.classList.add('active');}
+  if(bb){document.querySelectorAll('.bn').forEach(b=>b.classList.remove('active'));bb.classList.add('active');}
+  if(name==='relays')updateRelayPage();
+  if(name==='profile')renderProfile();
+}
+function updateUserPill() {
+  const el=document.getElementById('user-pill'); if(!el)return;
+  el.innerHTML=`<div class="user-pill" onclick="showPage('profile')"><div class="user-av">${(S.displayName||'?')[0].toUpperCase()}</div><span class="user-name">${S.displayName||S.npub}</span></div>`;
+}
+function updateLogAv() { const e=document.getElementById('log-av');if(e)e.textContent=(S.displayName||'?')[0].toUpperCase(); }
+function updateBal() { const e=document.getElementById('bal');if(e)e.textContent=S.balance.toLocaleString()+' sats'; }
+function openPost() { document.getElementById('post-modal').classList.remove('hidden'); updatePostRelayBar(); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function resetPostForm() { ['p-dur','p-int','p-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''}); document.getElementById('ipg').innerHTML=''; document.getElementById('hash-row').style.display='none'; S.postImages=[]; S.imageHashes=[]; }
+function selType(el,t) { document.querySelectorAll('.topt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');S.selectedType=t; }
+function openLbox(src) { document.getElementById('lbox-img').src=src;document.getElementById('lbox').classList.remove('hidden'); }
+function closeLbox() { document.getElementById('lbox').classList.add('hidden'); }
+function toggleElog() { document.getElementById('elog').classList.toggle('open'); }
+function signOut() { sessionStorage.clear(); document.getElementById('screen-app').classList.remove('active'); document.getElementById('screen-login').classList.add('active'); Object.keys(S.pool).forEach(u=>{try{S.pool[u].close()}catch{}});toast('Signed out','ok'); }
+function findPost(id) { return S.posts.find(p=>p.eventId===id); }
+function fmtS(n) { return n>=1000?(n/1000).toFixed(1).replace('.0','')+'K':String(n); }
+function timeAgo(ts) { const d=Date.now()/1000-ts; return d<60?'just now':d<3600?Math.floor(d/60)+'m ago':Math.floor(d/3600)+'h ago'; }
+function tIcon(t) { return {Lifting:'🏋️',Running:'🏃',Combat:'⚔️',Cycling:'🚴',Walking:'🚶',Custom:'⚡'}[t]||'💪'; }
+function randomHex(bytes) { return [...crypto.getRandomValues(new Uint8Array(bytes))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function log(msg,type='') { const c=document.getElementById('elog-e');if(!c)return;const ts=new Date().toLocaleTimeString('en',{hour12:false});const d=document.createElement('div');d.className='ee '+type;d.textContent=`[${ts}] ${msg}`;c.appendChild(d);c.scrollTop=c.scrollHeight;while(c.children.length>100)c.removeChild(c.firstChild); }
+function toast(msg,type='') { const c=document.getElementById('toasts');const d=document.createElement('div');d.className='toast '+type;d.textContent=msg;c.appendChild(d);setTimeout(()=>{d.style.animation='toastOut 0.3s ease forwards';setTimeout(()=>d.remove(),300);},3500); }
+</script>
+
+</body>
+</html>
