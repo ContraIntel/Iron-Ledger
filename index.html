@@ -1459,7 +1459,9 @@ async function submitWorkout() {
   btn.textContent = '⚡ SIGN & BROADCAST';
 
   if (signed) {
-    prependPost({ eventId:signed.id, pubkey:S.pubkey, user:S.displayName||'you', avatar:(S.displayName||'Y')[0].toUpperCase(), type:S.selectedType, duration:+dur, intensity:+(intensity||7), streak:13, caption:notes||tpl.content, images:[...S.postImages], mediaHash:S.imageHashes[0]||null, zapTotal:0, cosigns:0, comments:[], time:'just now', verified:false });
+    const newPost = { eventId:signed.id, pubkey:S.pubkey, user:S.displayName||'you', avatar:(S.displayName||'Y')[0].toUpperCase(), type:S.selectedType, duration:+dur, intensity:+(intensity||7), streak:13, caption:notes||tpl.content, images:[...S.postImages], mediaHash:S.imageHashes[0]||null, zapTotal:0, cosigns:0, comments:[], time:'just now', verified:false };
+    S.posts.unshift(newPost);
+    prependPost(newPost);
     closeModal('post-modal');
     // resetPostForm called by closeModal
     setTimeout(()=>toast('🤖 Spotter Bot reviewing…','ok'),1400);
@@ -1515,11 +1517,13 @@ function ingestEvent(ev) {
   if (S.posts.find(p=>p.eventId===ev.id)) return;
   const t={}; (ev.tags||[]).forEach(t2=>{if(!t[t2[0]])t[t2[0]]=[];t[t2[0]].push(t2.slice(1));});
   const p={ eventId:ev.id, pubkey:ev.pubkey, user:t.username?.[0]?.[0]||ev.pubkey.slice(0,10), avatar:(t.username?.[0]?.[0]||'?')[0].toUpperCase(), type:t.workout?.[0]?.[0]||'Custom', duration:+t.duration?.[0]?.[0]||0, intensity:+t.intensity?.[0]?.[0]||0, streak:+t.streak?.[0]?.[0]||1, caption:ev.content, images:(t.img||[]).map(i=>i[0]).filter(Boolean), mediaHash:t.mediahash?.[0]?.[0]||null, zapTotal:0, cosigns:0, comments:[], time:timeAgo(ev.created_at), verified:false, fromRelay:true };
-  S.posts.unshift(p); prependPost(p); log('Event from relay: @'+p.user,'ok');
+  S.posts.unshift(p);
+  prependPost(p);
+  log('Event from relay: @'+p.user,'ok');
 }
 function prependPost(p) {
   const el=document.getElementById('feed'); if(!el)return;
-  S.posts.unshift(p);
+  // Don't push to S.posts here - caller handles that
   const d=document.createElement('div'); d.innerHTML=postHTML(p,0); el.insertBefore(d.firstChild,el.firstChild);
 }
 
@@ -1790,7 +1794,19 @@ function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
   if (id === 'post-modal') resetPostForm();
 }
-function resetPostForm() { ['p-dur','p-int','p-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''}); document.getElementById('ipg').innerHTML=''; document.getElementById('hash-row').style.display='none'; S.postImages=[]; S.imageHashes=[]; }
+function resetPostForm() {
+  ['p-dur','p-int','p-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const ipg=document.getElementById('ipg'); if(ipg)ipg.innerHTML='';
+  const hr=document.getElementById('hash-row'); if(hr)hr.style.display='none';
+  S.postImages=[]; S.imageHashes=[];
+  S.selectedType='Lifting';
+  // Reset type selector back to Lift
+  const modal=document.getElementById('post-modal');
+  if(modal){
+    modal.querySelectorAll('.topt').forEach(o=>o.classList.remove('sel'));
+    const first=modal.querySelector('.topt'); if(first)first.classList.add('sel');
+  }
+}
 function selType(el,t) {
   // Scope to the post modal only so we don't accidentally touch other elements
   const modal = document.getElementById('post-modal');
